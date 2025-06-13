@@ -25,7 +25,7 @@ android {
             project.rootProject.file("local.properties").inputStream()
         )
         buildConfigField(
-            "String", "API_KEY", properties.getProperty("API_KEY")
+            "String", "SERVER_CLIENT_ID", properties.getProperty("SERVER_CLIENT_ID")
         )
     }
 

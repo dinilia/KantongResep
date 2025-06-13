@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -33,29 +34,27 @@ import com.andiniaulia3119.kantongresep.model.User
 fun ProfilDialog(
     user: User,
     onDismissRequest: () -> Unit,
-    onLogoutConfirmed: () -> Unit
-) {
-    Dialog(onDismissRequest = onDismissRequest) {
+    onConfirmation: () -> Unit
+){
+    Dialog(onDismissRequest = { onDismissRequest() }) {
         Card(
             modifier = Modifier.padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(16.dp),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(user.photoUrl)
                         .crossfade(true)
                         .build(),
-                    contentDescription = "Foto Profil",
+                    contentDescription = null,
                     contentScale = ContentScale.Crop,
                     placeholder = painterResource(id = R.drawable.loading_img),
-                    error = painterResource(id = R.drawable.broken_image),
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(CircleShape)
+                    error = painterResource(id = R.drawable.baseline_broken_image_24),
+                    modifier = Modifier.size(100.dp).clip(CircleShape)
                 )
                 Text(
                     text = user.name,
@@ -70,24 +69,22 @@ fun ProfilDialog(
                     overflow = TextOverflow.Ellipsis
                 )
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                     horizontalArrangement = Arrangement.Center
                 ) {
                     OutlinedButton(
-                        onClick = onDismissRequest,
+                        onClick = { onDismissRequest() },
                         modifier = Modifier.padding(8.dp)
                     ) {
-                        Text(text = "Tutup")
+                        Text(stringResource(R.string.tutup))
                     }
                     OutlinedButton(
-                        onClick = onLogoutConfirmed,
+                        onClick = { onConfirmation() },
                         modifier = Modifier.padding(8.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                        border = BorderStroke(1.dp,MaterialTheme.colorScheme.error)
                     ) {
                         Text(
-                            text = "Logout",
+                            text = stringResource(R.string.logout),
                             color = MaterialTheme.colorScheme.error
                         )
                     }
