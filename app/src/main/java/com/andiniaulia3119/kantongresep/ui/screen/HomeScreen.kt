@@ -251,98 +251,119 @@ fun HomeScreen(
             columns = StaggeredGridCells.Fixed(2),
             verticalItemSpacing = 8.dp
         ) {
-            item(span = StaggeredGridItemSpan.FullLine) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Masak apa hari ini,", fontSize = 14.sp)
-                    Text(
-                        if (user.email.isNotEmpty()) user.name else "Yuk login dulu~",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                }
-            }
-
-            item(span = StaggeredGridItemSpan.FullLine) {
-                SearchBar(
-                    value = searchQuery,
-                    onSearchAction = { searchQuery = it },
-                    filterList = listOf("Sup", "Gorengan", "Minuman Kopi"),
-                    selectedFilter = selectedFilter,
-                    onFilterSelected = { selectedFilter = it },
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
-
-            item(span = StaggeredGridItemSpan.FullLine) {
+        item(span = StaggeredGridItemSpan.FullLine) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Masak apa hari ini,", fontSize = 14.sp)
                 Text(
-                    "Resep Makanan Indonesia",
+                    user.name,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                    fontSize = 20.sp
                 )
             }
+        }
 
-            when (status) {
-                Api.ApiStatus.SUCCESS -> {
-                    items(filteredList) { resep ->
-                        RecipeCard(
-                            name = resep.nama,
-                            imageId = resep.imageId,
-                            deskripsi = resep.deskripsi,
-                            modifier = Modifier.padding(8.dp),
-                            onCardClick = {
-                                selectedResep = resep
-                                showHapusDialog = true
-                            },
-                            onDeleteClick = {
-                                selectedResep = resep
-                                showHapusDialog = true
-                            },
-                            onEditClick = {
-                                selectedResep = resep
-                                selectedBitmap = null
-                                isEditMode = true
-                                showImageDialog = true
+        item(span = StaggeredGridItemSpan.FullLine) {
+            SearchBar(
+                value = searchQuery,
+                onSearchAction = { searchQuery = it },
+                filterList = listOf("Sup", "Gorengan", "Minuman Kopi"),
+                selectedFilter = selectedFilter,
+                onFilterSelected = { selectedFilter = it },
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
+
+        item(span = StaggeredGridItemSpan.FullLine) {
+            Text(
+                "Resep Makanan Indonesia",
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
+    }
+
+        // Cek Login
+        if (user.email.isNullOrBlank()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Belum ada data, harus login dulu")
+            }
+        } else {
+            LazyVerticalStaggeredGrid(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(top = 170.dp),
+                columns = StaggeredGridCells.Fixed(2),
+                verticalItemSpacing = 8.dp
+            ) {
+                when (status) {
+                    Api.ApiStatus.SUCCESS -> {
+                        items(filteredList) { resep ->
+                            RecipeCard(
+                                name = resep.nama,
+                                imageId = resep.imageId,
+                                deskripsi = resep.deskripsi,
+                                modifier = Modifier.padding(8.dp),
+                                onCardClick = {
+                                    selectedResep = resep
+                                    showHapusDialog = true
+                                },
+                                onDeleteClick = {
+                                    selectedResep = resep
+                                    showHapusDialog = true
+                                },
+                                onEditClick = {
+                                    selectedResep = resep
+                                    selectedBitmap = null
+                                    isEditMode = true
+                                    showImageDialog = true
+                                }
+                            )
+                        }
+
+                        if (showHapusDialog && selectedResep != null) {
+                            item(span = StaggeredGridItemSpan.FullLine) {
+                                HapusDialog(
+                                    data = selectedResep!!,
+                                    onDismissRequest = { showHapusDialog = false }
+                                ) {
+                                    viewModel.deleteResep(selectedResep!!.recipeId, user.email)
+                                    showHapusDialog = false
+                                }
                             }
-                        )
+                        }
                     }
 
-                    if (showHapusDialog && selectedResep != null) {
+                    Api.ApiStatus.LOADING -> {
                         item(span = StaggeredGridItemSpan.FullLine) {
-                            HapusDialog(
-                                data = selectedResep!!,
-                                onDismissRequest = { showHapusDialog = false }
-                            ) {
-                                viewModel.deleteResep(selectedResep!!.recipeId, user.email)
-                                showHapusDialog = false
+                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(modifier = Modifier.padding(32.dp))
                             }
                         }
                     }
-                }
 
-                Api.ApiStatus.LOADING -> {
-                    item(span = StaggeredGridItemSpan.FullLine) {
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(modifier = Modifier.padding(32.dp))
-                        }
-                    }
-                }
-
-                Api.ApiStatus.FAILED -> {
-                    item(span = StaggeredGridItemSpan.FullLine) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            val message = if (user.email.isEmpty()) "Login dulu yuk untuk melihat data!" else "Terjadi kesalahan atau data kosong."
-                            Text(message)
-                            Button(
-                                onClick = { viewModel.fetchResep(user.email) },
-                                modifier = Modifier.padding(top = 16.dp)
+                    Api.ApiStatus.FAILED -> {
+                        item(span = StaggeredGridItemSpan.FullLine) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("Coba Lagi")
+                                val message = if (user.email.isEmpty()) "Login dulu yuk untuk melihat data!" else "Terjadi kesalahan atau data kosong."
+                                Text(message)
+                                Button(
+                                    onClick = { viewModel.fetchResep(user.email) },
+                                    modifier = Modifier.padding(top = 16.dp)
+                                ) {
+                                    Text("Coba Lagi")
+                                }
                             }
                         }
                     }
