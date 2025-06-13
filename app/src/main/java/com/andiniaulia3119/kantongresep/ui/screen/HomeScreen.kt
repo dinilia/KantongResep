@@ -114,14 +114,7 @@ fun HomeScreen(
         val uri = it.uriContent
         selectedBitmap = getCroppedImage(context.contentResolver, uri)
 
-        // Reset imageId dan deleteHash setiap kali gambar baru dipilih
-//        imageId = ""
-//        deleteHash = ""
-
-        // Set imageId dengan URI hasil crop agar tidak kosong
         imageId = uri?.toString() ?: ""
-        // Reset deleteHash jika perlu
-        // deleteHash = ""
 
         if (selectedBitmap != null) showImageDialog = true
     }
@@ -199,25 +192,35 @@ fun HomeScreen(
         }
 
         if (showImageDialog && (isEditMode || selectedBitmap != null)) {
+            val resep = selectedResep
+            val fallbackBitmap = if (isEditMode && selectedBitmap == null && resep != null) {
+                getCroppedImage(context.contentResolver, Uri.parse(resep.imageId))
+            } else null
+
             ImageDialog(
-                bitmap = selectedBitmap ?: Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888),
+                bitmap = selectedBitmap,
+                fallbackBitmap = fallbackBitmap,
                 onDismissRequest = {
                     showImageDialog = false
                     isEditMode = false
                     selectedResep = null
-                    // Reset imageId dan deleteHash saat dialog ditutup
-//                    imageId = ""
-//                    deleteHash = ""
+                    imageId = ""
+                    deleteHash = ""
                 },
                 onConfirmation = { nama, deskripsi, kategori ->
+                    val finalImageId = if (imageId.isBlank() && isEditMode && selectedResep != null) {
+                        selectedResep!!.imageId
+                    } else {
+                        imageId
+                    }
+
                     if (isEditMode && selectedResep != null) {
                         viewModel.updateResep(
                             id = selectedResep!!.recipeId,
                             nama = nama,
                             deskripsi = deskripsi,
                             kategori = kategori,
-                            imageId = imageId,
-                            deleteHash = deleteHash,
+                            imageId = finalImageId,
                             userEmail = user.email
                         )
                     } else {
@@ -233,7 +236,6 @@ fun HomeScreen(
                     showImageDialog = false
                     isEditMode = false
                     selectedResep = null
-                    // Reset imageId dan deleteHash setelah submit
                     imageId = ""
                     deleteHash = ""
                 },
@@ -297,7 +299,7 @@ fun HomeScreen(
                             },
                             onEditClick = {
                                 selectedResep = resep
-                                selectedBitmap = null // Diambil ulang jika perlu
+                                selectedBitmap = null
                                 isEditMode = true
                                 showImageDialog = true
                             }

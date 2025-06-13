@@ -22,8 +22,10 @@ fun ImageDialog(
     onDismissRequest: () -> Unit,
     onConfirmation: (String, String, String) -> Unit,
     isEdit: Boolean = false,
-    initialData: Resep? = null
+    initialData: Resep? = null,
+    fallbackBitmap: Bitmap? = null
 ) {
+    val bitmap = bitmap ?: fallbackBitmap
     if (bitmap == null) return
 
     var nama by remember { mutableStateOf(initialData?.nama ?: "") }

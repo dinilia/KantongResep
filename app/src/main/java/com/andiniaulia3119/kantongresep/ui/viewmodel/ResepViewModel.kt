@@ -74,7 +74,6 @@ class ResepViewModel(private val repository: ResepRepository) : ViewModel() {
                     deleteHash = "null"
                 )
 
-                // Logging JSON sebelum dikirim ke API
                 val moshi = com.squareup.moshi.Moshi.Builder()
                     .add(com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory())
                     .build()
@@ -99,20 +98,26 @@ class ResepViewModel(private val repository: ResepRepository) : ViewModel() {
         deskripsi: String,
         kategori: String,
         imageId: String,
-        userEmail: String,
-        deleteHash: String
+        userEmail: String
     ) {
         viewModelScope.launch {
             try {
+                if (imageId.isBlank()) {
+                    _message.value = "Gambar tidak boleh kosong!"
+                    Log.e("ResepViewModel", "updateResep: imageId kosong!")
+                    return@launch
+                }
                 val updatedResep = ResepCreate(
                     userEmail = userEmail,
                     nama = nama,
                     deskripsi = deskripsi,
                     kategori = kategori,
-                    imageId = imageId
-//                    deleteHash = deleteHash
+                    imageId = imageId,
+                    deleteHash = "null"
                 )
+                Log.d("ResepViewModel", "updateResep: id=$id, data=$updatedResep")
                 val response = repository.updateResep(id, updatedResep)
+                Log.d("ResepViewModel", "updateResep response: $response")
                 if (response.resep != null) {
                     fetchResep(userEmail)
                     _message.value = "Resep berhasil diperbarui!"
@@ -120,6 +125,7 @@ class ResepViewModel(private val repository: ResepRepository) : ViewModel() {
                     _message.value = "Gagal memperbarui resep!"
                 }
             } catch (e: Exception) {
+                Log.e("ResepViewModel", "Error updateResep", e)
                 _message.value = "Gagal update: ${e.message}"
             }
         }
