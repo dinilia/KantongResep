@@ -141,7 +141,7 @@ fun HomeScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("DapurKu!", fontWeight = FontWeight.Bold) },
+                title = { Text("KantongResep", fontWeight = FontWeight.Bold) },
                 actions = {
                     IconButton(onClick = {
                         if (user.email.isEmpty()) {
