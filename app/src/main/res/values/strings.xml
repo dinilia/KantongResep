@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">KantongResep</string>
+    <string name="login_success">Berhasil Masuk</string>
+    <string name="login_failed">Masuk Gagal</string>
+    <string name="logout_success">Keluar Gagal</string>
+    <string name="tutup">Tutup</string>
+    <string name="logout">Logout</string>
 </resources>

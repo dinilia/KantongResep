@@ -1,6 +1,6 @@
 package com.andiniaulia3119.kantongresep.ui.viewmodel
 
-import android.graphics.Bitmap
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andiniaulia3119.kantongresep.model.Resep
@@ -26,16 +26,15 @@ class ResepViewModel(private val repository: ResepRepository) : ViewModel() {
         _message.value = null
     }
 
-
     fun fetchResep(email: String) {
         viewModelScope.launch {
-            _status.value = Api.ApiStatus.LOADING
             try {
-                val data = repository.getResep(email)
-                _resepList.value = data
+                _resepList.value = repository.getResep(email)
+                Log.d("ResepViewModel", "Data resep berhasil diambil: ${_resepList.value}") // Tambahkan ini
                 _status.value = Api.ApiStatus.SUCCESS
             } catch (e: Exception) {
                 _status.value = Api.ApiStatus.FAILED
+                _message.value = "Gagal memuat data: ${e.message}"
             }
         }
     }
@@ -43,7 +42,7 @@ class ResepViewModel(private val repository: ResepRepository) : ViewModel() {
     fun deleteResep(id: Int, email: String) {
         viewModelScope.launch {
             try {
-                repository.deleteResep(id, email)
+                repository.deleteResep(id)
                 fetchResep(email)
                 _message.value = "Resep berhasil dihapus!"
             } catch (e: Exception) {
@@ -52,38 +51,44 @@ class ResepViewModel(private val repository: ResepRepository) : ViewModel() {
         }
     }
 
-    fun uploadAndCreateResep(
+    fun addResep(
         nama: String,
         deskripsi: String,
         kategori: String,
-        bitmap: Bitmap,
-        userEmail: String
+        imageId: String,
+        userEmail: String,
+        deleteHash: String
     ) {
         viewModelScope.launch {
+            android.util.Log.d(
+                "ResepViewModel",
+                "addResep: nama=$nama, deskripsi=$deskripsi, kategori=$kategori, imageId=$imageId, userEmail=$userEmail"
+            )
             try {
-                val response = repository.uploadImage(bitmap)
-                if (response.isSuccessful) {
-                    val data = response.body()?.data
-                    if (data != null) {
-                        val resep = ResepCreate(
-                            userEmail = userEmail,
-                            nama = nama,
-                            deskripsi = deskripsi,
-                            kategori = kategori,
-                            imageId = data.id,
-                            deleteHash = data.deleteHash
-                        )
-                        repository.addResep(resep)
-                        fetchResep(userEmail)
-                        _message.value = "Resep berhasil ditambahkan!"
-                    } else {
-                        _message.value = "Gagal mengunggah gambar!"
-                    }
-                } else {
-                    _message.value = "Upload gagal: ${response.message()}"
-                }
+                val data = ResepCreate(
+                    nama = nama,
+                    deskripsi = deskripsi,
+                    kategori = kategori,
+                    imageId = imageId,
+                    userEmail = userEmail,
+                    deleteHash = "null"
+                )
+
+                // Logging JSON sebelum dikirim ke API
+                val moshi = com.squareup.moshi.Moshi.Builder()
+                    .add(com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory())
+                    .build()
+                val adapter = moshi.adapter(ResepCreate::class.java)
+                val json = adapter.toJson(data)
+                Log.d("ResepViewModel", "JSON yang dikirim: $json")
+
+                val response = repository.addResep(data)
+                android.util.Log.d("ResepViewModel", "addResep success: $response")
+            } catch (e: retrofit2.HttpException) {
+                val errorBody = e.response()?.errorBody()?.string()
+                android.util.Log.e("ResepViewModel", "Error addResep (HttpException): $errorBody")
             } catch (e: Exception) {
-                _message.value = "Error saat upload: ${e.message}"
+                android.util.Log.e("ResepViewModel", "Error addResep (Exception): ${e.message}", e)
             }
         }
     }
@@ -93,31 +98,26 @@ class ResepViewModel(private val repository: ResepRepository) : ViewModel() {
         nama: String,
         deskripsi: String,
         kategori: String,
-        bitmap: Bitmap,
-        userEmail: String
+        imageId: String,
+        userEmail: String,
+        deleteHash: String
     ) {
         viewModelScope.launch {
             try {
-                val response = repository.uploadImage(bitmap)
-                if (response.isSuccessful) {
-                    val data = response.body()?.data
-                    if (data != null) {
-                        val updatedResep = ResepCreate(
-                            userEmail = userEmail,
-                            nama = nama,
-                            deskripsi = deskripsi,
-                            kategori = kategori,
-                            imageId = data.id,
-                            deleteHash = data.deleteHash
-                        )
-                        repository.updateResep(id, updatedResep)
-                        fetchResep(userEmail)
-                        _message.value = "Resep berhasil diperbarui!"
-                    } else {
-                        _message.value = "Gagal mengunggah gambar!"
-                    }
+                val updatedResep = ResepCreate(
+                    userEmail = userEmail,
+                    nama = nama,
+                    deskripsi = deskripsi,
+                    kategori = kategori,
+                    imageId = imageId
+//                    deleteHash = deleteHash
+                )
+                val response = repository.updateResep(id, updatedResep)
+                if (response.resep != null) {
+                    fetchResep(userEmail)
+                    _message.value = "Resep berhasil diperbarui!"
                 } else {
-                    _message.value = "Upload gagal: ${response.message()}"
+                    _message.value = "Gagal memperbarui resep!"
                 }
             } catch (e: Exception) {
                 _message.value = "Gagal update: ${e.message}"

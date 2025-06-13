@@ -63,23 +63,27 @@ import com.andiniaulia3119.kantongresep.model.Resep
 import com.andiniaulia3119.kantongresep.model.User
 import com.andiniaulia3119.kantongresep.network.Api
 import com.andiniaulia3119.kantongresep.network.UserDataStore
+import com.andiniaulia3119.kantongresep.repository.ResepRepository
 import com.andiniaulia3119.kantongresep.ui.viewmodel.ResepViewModel
+import com.andiniaulia3119.kantongresep.ui.viewmodel.ResepViewModelFactory
 import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageContractOptions
 import com.canhub.cropper.CropImageOptions
-import com.canhub.cropper.CropImageView
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
-    viewModel: ResepViewModel = viewModel()
+    viewModel: ResepViewModel = viewModel(
+        factory = ResepViewModelFactory(ResepRepository())
+    )
 ) {
     val context = LocalContext.current
     val dataStore = UserDataStore(context)
@@ -91,6 +95,9 @@ fun HomeScreen(
 
     var selectedBitmap: Bitmap? by remember { mutableStateOf(null) }
     var selectedResep by remember { mutableStateOf<Resep?>(null) }
+
+    var imageId by remember { mutableStateOf("") }
+    var deleteHash by remember { mutableStateOf("") }
 
     val resepList by viewModel.resepList.collectAsState()
     val status by viewModel.status.collectAsState()
@@ -106,6 +113,15 @@ fun HomeScreen(
     val cropLauncher = rememberLauncherForActivityResult(CropImageContract()) {
         val uri = it.uriContent
         selectedBitmap = getCroppedImage(context.contentResolver, uri)
+
+        // Reset imageId dan deleteHash setiap kali gambar baru dipilih
+//        imageId = ""
+//        deleteHash = ""
+
+        // Set imageId dengan URI hasil crop agar tidak kosong
+        imageId = uri?.toString() ?: ""
+        // Reset deleteHash jika perlu
+        // deleteHash = ""
 
         if (selectedBitmap != null) showImageDialog = true
     }
@@ -189,6 +205,9 @@ fun HomeScreen(
                     showImageDialog = false
                     isEditMode = false
                     selectedResep = null
+                    // Reset imageId dan deleteHash saat dialog ditutup
+//                    imageId = ""
+//                    deleteHash = ""
                 },
                 onConfirmation = { nama, deskripsi, kategori ->
                     if (isEditMode && selectedResep != null) {
@@ -197,21 +216,26 @@ fun HomeScreen(
                             nama = nama,
                             deskripsi = deskripsi,
                             kategori = kategori,
-                            bitmap = selectedBitmap ?: Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888),
+                            imageId = imageId,
+                            deleteHash = deleteHash,
                             userEmail = user.email
                         )
                     } else {
-                        viewModel.uploadAndCreateResep(
+                        viewModel.addResep(
                             nama = nama,
                             deskripsi = deskripsi,
                             kategori = kategori,
-                            bitmap = selectedBitmap ?: Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888),
+                            imageId = imageId,
+                            deleteHash = deleteHash,
                             userEmail = user.email
                         )
                     }
                     showImageDialog = false
                     isEditMode = false
                     selectedResep = null
+                    // Reset imageId dan deleteHash setelah submit
+                    imageId = ""
+                    deleteHash = ""
                 },
                 isEdit = isEditMode,
                 initialData = selectedResep
@@ -327,14 +351,13 @@ fun HomeScreen(
 }
 
 
-// Google Sign-In & Sign-Out Logic
-private suspend fun signIn(context: Context, dataStore: UserDataStore) {
-    val googleIdOption = GetGoogleIdOption.Builder()
+private suspend fun signIn(context: Context, dataStore: UserDataStore){
+    val googleIdOption: GetGoogleIdOption = GetGoogleIdOption.Builder()
         .setFilterByAuthorizedAccounts(false)
-        .setServerClientId(BuildConfig.API_KEY)
+        .setServerClientId(BuildConfig.SERVER_CLIENT_ID)
         .build()
 
-    val request = GetCredentialRequest.Builder()
+    val request: GetCredentialRequest = GetCredentialRequest.Builder()
         .addCredentialOption(googleIdOption)
         .build()
 
@@ -342,16 +365,25 @@ private suspend fun signIn(context: Context, dataStore: UserDataStore) {
         val credentialManager = CredentialManager.create(context)
         val result = credentialManager.getCredential(context, request)
         handleSignIn(result, dataStore)
-    } catch (e: GetCredentialException) {
+
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, context.getString(R.string.login_success), Toast.LENGTH_SHORT).show()
+        }
+    } catch (e: GetCredentialException){
         Log.e("SIGN-IN", "Error: ${e.errorMessage}")
+
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, context.getString(R.string.login_failed), Toast.LENGTH_SHORT).show()
+        }
     }
 }
 
-private suspend fun handleSignIn(result: GetCredentialResponse, dataStore: UserDataStore) {
+private suspend fun handleSignIn(
+    result: GetCredentialResponse,
+    dataStore: UserDataStore
+) {
     val credential = result.credential
-    if (credential is CustomCredential &&
-        credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-    ) {
+    if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
         try {
             val googleId = GoogleIdTokenCredential.createFrom(credential.data)
             val nama = googleId.displayName ?: ""
@@ -359,20 +391,27 @@ private suspend fun handleSignIn(result: GetCredentialResponse, dataStore: UserD
             val photoUrl = googleId.profilePictureUri.toString()
             dataStore.saveData(User(nama, email, photoUrl))
         } catch (e: GoogleIdTokenParsingException) {
-            Log.e("SIGN-IN", "Error parsing ID: ${e.message}")
+            Log.e("SIGN-IN", "Error: ${e.message}")
         }
-    } else {
-        Log.e("SIGN-IN", "Unrecognized custom credential type")
+    }
+    else {
+        Log.e("SIGN-IN", "Error: unrecognized custom credential type.")
     }
 }
 
-private suspend fun signOut(context: Context, dataStore: UserDataStore) {
+private suspend fun signOut(context: Context, dataStore: UserDataStore){
     try {
         val credentialManager = CredentialManager.create(context)
-        credentialManager.clearCredentialState(ClearCredentialStateRequest())
+        credentialManager.clearCredentialState(
+            ClearCredentialStateRequest()
+        )
         dataStore.saveData(User())
+
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, context.getString(R.string.logout_success), Toast.LENGTH_SHORT).show()
+        }
     } catch (e: ClearCredentialException) {
-        Log.e("SIGN-OUT", "Error: ${e.errorMessage}")
+        Log.e("SIGN-IN", "Error: ${e.errorMessage}")
     }
 }
 

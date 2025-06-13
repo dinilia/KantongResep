@@ -1,26 +1,20 @@
 package com.andiniaulia3119.kantongresep.network
 
-import com.andiniaulia3119.kantongresep.model.ImageUploadResponse
 import com.andiniaulia3119.kantongresep.model.MessageResponse
 import com.andiniaulia3119.kantongresep.model.Resep
 import com.andiniaulia3119.kantongresep.model.ResepCreate
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import okhttp3.MultipartBody
-import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
-import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.PUT
-import retrofit2.http.Part
 import retrofit2.http.Path
-import retrofit2.http.Query
 
-private const val BASE_URL = "https://resep-api-849c0e113bf0.herokuapp.com"
+private const val BASE_URL = "https://resep-api-849c0e113bf0.herokuapp.com/api/"
 
 private val moshi = Moshi.Builder()
     .add(KotlinJsonAdapterFactory())
@@ -32,35 +26,29 @@ private val retrofit = Retrofit.Builder()
     .build()
 
 interface ApiService {
-    @GET("recipes/")
-    suspend fun getAllData(
-        @Query("email") email: String
-    ): List<Resep>
+    @GET("resep")
+    suspend fun getAllData(): List<Resep>
 
-    @POST("recipes/")
+    @GET("resep/{recipe_id}")
+    suspend fun getResepById(
+        @Path("recipe_id") id: Int
+    ): Resep
+
+    @POST("resep")
     suspend fun addData(
         @Body data: ResepCreate
     ): MessageResponse
 
-    @DELETE("recipes/{recipe_id}")
+    @DELETE("resep/{recipe_id}")
     suspend fun deleteData(
-        @Path("recipe_id") id: Int,
-        @Query("email") email: String
+        @Path("recipe_id") id: Int
     ): MessageResponse
 
-    @Multipart
-    @POST("upload")
-    suspend fun uploadImage(
-        @Part image: MultipartBody.Part
-    ): Response<ImageUploadResponse>
-
-    @PUT("resep/{id}")
+    @PUT("resep/{recipe_id}")
     suspend fun updateResep(
-        @Path("id") id: Int,
+        @Path("recipe_id") id: Int,
         @Body data: ResepCreate
-    ): Response<Unit>
-
-
+    ): MessageResponse
 }
 
 object Api {

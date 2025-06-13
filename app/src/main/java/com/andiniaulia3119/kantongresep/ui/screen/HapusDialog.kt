@@ -115,7 +115,7 @@ fun HapusDialog(
 @Composable
 private fun Prev() {
     HapusDialog(
-        data = Resep(1, "email@email.com", "Enak banget", "sateayam.jpg", "minuman", "Sate Ayam", "Resep Sate Ayam", "2023-10-01"),
+        data = Resep(1, "email@email.com", "Enak banget", "sateayam.jpg", "minuman", "Sate Ayam", "null", "2023-10-01"),
         onDismissRequest = {},
         onConfirmation = {}
     )
