@@ -82,6 +82,7 @@ class ResepViewModel(private val repository: ResepRepository) : ViewModel() {
                 Log.d("ResepViewModel", "JSON yang dikirim: $json")
 
                 val response = repository.addResep(data)
+                fetchResep(userEmail)
                 android.util.Log.d("ResepViewModel", "addResep success: $response")
             } catch (e: retrofit2.HttpException) {
                 val errorBody = e.response()?.errorBody()?.string()
